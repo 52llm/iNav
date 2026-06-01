@@ -1,0 +1,5 @@
+/inav
+/inav.db
+/inav.db-*
+*.test
+/web/dist/
