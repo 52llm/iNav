@@ -53,14 +53,25 @@ func (c *Client) Tag(ctx context.Context, in TagInput) (TagResult, error) {
 	if len(content) > 6000 {
 		content = content[:6000]
 	}
-	prompt := fmt.Sprintf(`You categorize web pages for a personal bookmark manager.
-Return ONLY a JSON object: {"tags": ["..."], "summary": "one concise sentence"}.
-Rules:
-- Prefer reusing an EXISTING tag when one fits; only invent a new tag if none apply.
-- Use 1-4 tags. Keep tag names short and consistent in language with the page.
+	prompt := fmt.Sprintf(`You assign browsing tags to a web page for a personal bookmark portal,
+where tags are the buckets a person filters by in a sidebar. Good tags are
+BROAD and REUSABLE across many pages; avoid narrow, page-specific ones.
+
+Output ONLY a JSON object: {"tags": ["..."], "summary": "one concise sentence"}.
+
+Tag rules:
+- Reuse an EXISTING tag whenever the page reasonably fits it. Strongly prefer
+  reusing over inventing a new tag.
+- Invent a new tag only if no existing tag fits, and make it broad enough to
+  recur on future pages.
+- Tags are lowercase ENGLISH, naming a general topic or domain.
+  Good (broad, reusable): "python", "go", "ai", "databases", "web", "devops", "security", "cli".
+  Bad (too narrow / one-off): "http-router", "api-wrapper", "orm", "ai-coding-agents".
+- When unsure between a general and a specific tag, choose the general one.
+- Use 1-3 tags. You may include AT MOST ONE more specific tag if it clearly adds value.
 - summary: one neutral sentence describing what the page is.
 
-EXISTING TAGS: %s
+EXISTING TAGS (reuse these first): %s
 
 PAGE TITLE: %s
 PAGE URL: %s
