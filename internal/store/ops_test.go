@@ -50,3 +50,27 @@ func TestRenameTagMergesOnCollision(t *testing.T) {
 		t.Errorf("bookmark A tags = %v, want [frontend]", a.Tags)
 	}
 }
+
+func TestMergeTags(t *testing.T) {
+	s := newTestStore(t)
+	idA, _ := s.UpsertBookmark(NewBookmark{URL: "https://a.com"})
+	idB, _ := s.UpsertBookmark(NewBookmark{URL: "https://b.com"})
+	_ = s.SetBookmarkTags(idA, []string{"React"}, "")
+	_ = s.SetBookmarkTags(idB, []string{"Vue", "React"}, "")
+
+	affected, err := s.MergeTags([]string{"React", "Vue"}, "frontend")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if affected != 2 {
+		t.Errorf("affected = %d, want 2", affected)
+	}
+	tags, _ := s.ListTags()
+	if len(tags) != 1 || tags[0].Name != "frontend" {
+		t.Fatalf("want only [frontend], got %+v", tags)
+	}
+	a, _ := s.GetBookmark(idA)
+	if len(a.Tags) != 1 || a.Tags[0] != "frontend" {
+		t.Errorf("A tags = %v", a.Tags)
+	}
+}

@@ -69,3 +69,56 @@ func (s *Store) RenameTag(oldName, newName string) error {
 	}
 	return tx.Commit()
 }
+
+// MergeTags merges all source tags into target (created if absent) and returns
+// the number of distinct bookmarks now carrying target.
+func (s *Store) MergeTags(sources []string, target string) (int, error) {
+	targetNorm := NormalizeTag(target)
+	if targetNorm == "" {
+		return 0, fmt.Errorf("target tag name is empty")
+	}
+
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	var targetID int64
+	err = tx.QueryRow(`SELECT id FROM tags WHERE norm_name = ?`, targetNorm).Scan(&targetID)
+	if err == sql.ErrNoRows {
+		res, e := tx.Exec(`INSERT INTO tags (name, norm_name) VALUES (?, ?)`, strings.TrimSpace(target), targetNorm)
+		if e != nil {
+			return 0, e
+		}
+		targetID, _ = res.LastInsertId()
+	} else if err != nil {
+		return 0, err
+	}
+
+	for _, src := range sources {
+		srcNorm := NormalizeTag(src)
+		if srcNorm == "" || srcNorm == targetNorm {
+			continue
+		}
+		var srcID int64
+		e := tx.QueryRow(`SELECT id FROM tags WHERE norm_name = ?`, srcNorm).Scan(&srcID)
+		if e == sql.ErrNoRows {
+			continue
+		} else if e != nil {
+			return 0, e
+		}
+		if err := mergeInto(tx, srcID, targetID); err != nil {
+			return 0, err
+		}
+	}
+
+	var affected int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM bookmark_tags WHERE tag_id = ?`, targetID).Scan(&affected); err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return affected, nil
+}
