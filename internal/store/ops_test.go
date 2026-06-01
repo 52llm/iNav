@@ -105,3 +105,37 @@ func TestAddAndRemoveTag(t *testing.T) {
 		}
 	}
 }
+
+func TestRetagBookmark(t *testing.T) {
+	s := newTestStore(t)
+	id, _ := s.UpsertBookmark(NewBookmark{URL: "https://a.com"})
+	_ = s.SetBookmarkTags(id, []string{"Go"}, "sum") // now tagged
+
+	if err := s.RetagBookmark(id); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := s.GetBookmark(id)
+	if b.Status != StatusPending {
+		t.Errorf("status = %q, want pending", b.Status)
+	}
+	if _, ok, _ := s.ClaimNextJob(); !ok {
+		t.Error("expected a re-enqueued job")
+	}
+}
+
+func TestDeleteBookmarkPrunesOrphanTags(t *testing.T) {
+	s := newTestStore(t)
+	id, _ := s.UpsertBookmark(NewBookmark{URL: "https://a.com"})
+	_ = s.SetBookmarkTags(id, []string{"solo"}, "")
+
+	if err := s.DeleteBookmark(id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.GetBookmark(id); err == nil {
+		t.Error("expected bookmark to be gone")
+	}
+	tags, _ := s.ListTags()
+	if len(tags) != 0 {
+		t.Errorf("expected orphan tag pruned, got %+v", tags)
+	}
+}

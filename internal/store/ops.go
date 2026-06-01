@@ -206,3 +206,28 @@ func (s *Store) RemoveTagFromBookmarks(ids []int64, tag string) (int, error) {
 	}
 	return affected, nil
 }
+
+// RetagBookmark resets a bookmark to pending and enqueues a fresh tagging job.
+func (s *Store) RetagBookmark(id int64) error {
+	if _, err := s.DB.Exec(`UPDATE bookmarks SET status = ? WHERE id = ?`, StatusPending, id); err != nil {
+		return err
+	}
+	return s.EnqueueTagJob(id)
+}
+
+// DeleteBookmark removes a bookmark (its tag links and jobs cascade) and prunes
+// any tags left orphaned.
+func (s *Store) DeleteBookmark(id int64) error {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`DELETE FROM bookmarks WHERE id = ?`, id); err != nil {
+		return err
+	}
+	if err := pruneOrphanTags(tx); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
