@@ -30,6 +30,12 @@ export default function TagManager({
     setMsg(`已合并 ${src.join("、")} → ${target}`);
     onChanged();
   }
+  async function retagAll() {
+    if (!confirm("重新给所有收藏生成标签？将清空现有标签并按最新提示词重打，可能消耗较多 LLM 调用。")) return;
+    const { queued } = await api.retagAll();
+    setMsg(`已重新入队 ${queued} 条，标签将陆续刷新`);
+    onChanged();
+  }
 
   return (
     <div className="bg-white border rounded-lg p-4 space-y-4 text-sm">
@@ -74,6 +80,13 @@ export default function TagManager({
             合并
           </button>
         </div>
+      </div>
+      <div className="border-t pt-3">
+        <h3 className="font-medium mb-2">重刷全部标签</h3>
+        <p className="text-xs text-gray-500 mb-2">改了打标提示词后，用它把所有收藏重新打一遍标签。</p>
+        <button onClick={retagAll} className="bg-amber-600 text-white rounded px-3 py-1">
+          全部重打标
+        </button>
       </div>
       <datalist id="taglist">
         {tags.map((t) => (

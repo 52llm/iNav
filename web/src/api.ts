@@ -53,6 +53,10 @@ export class Api {
     await this.req(`/api/bookmarks/${id}/retag`, { method: "POST" });
   }
 
+  async retagAll(): Promise<{ queued: number }> {
+    return (await this.req("/api/bookmarks/retag-all", { method: "POST" })).json();
+  }
+
   async deleteBookmark(id: number): Promise<void> {
     await this.req(`/api/bookmarks/${id}`, { method: "DELETE" });
   }

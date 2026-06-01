@@ -215,6 +215,28 @@ func (s *Store) RetagBookmark(id int64) error {
 	return s.EnqueueTagJob(id)
 }
 
+// RetagAll resets every bookmark to pending and enqueues a fresh tagging job
+// for each. Returns the number of bookmarks queued.
+func (s *Store) RetagAll() (int, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`UPDATE bookmarks SET status = ?`, StatusPending); err != nil {
+		return 0, err
+	}
+	res, err := tx.Exec(`INSERT INTO jobs (bookmark_id, status) SELECT id, ? FROM bookmarks`, JobQueued)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return int(n), nil
+}
+
 // DeleteBookmark removes a bookmark (its tag links and jobs cascade) and prunes
 // any tags left orphaned.
 func (s *Store) DeleteBookmark(id int64) error {
