@@ -2,4 +2,6 @@
 /inav.db
 /inav.db-*
 *.test
-/web/dist/
+/web/node_modules/
+/web/.vite/
+/web/*.tsbuildinfo
