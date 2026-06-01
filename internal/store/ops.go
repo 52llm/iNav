@@ -122,3 +122,87 @@ func (s *Store) MergeTags(sources []string, target string) (int, error) {
 	}
 	return affected, nil
 }
+
+// pruneOrphanTags deletes tags that no longer have any bookmarks.
+func pruneOrphanTags(tx *sql.Tx) error {
+	_, err := tx.Exec(`DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tag_id FROM bookmark_tags)`)
+	return err
+}
+
+// AddTagToBookmarks attaches tag to each bookmark and returns how many rows were
+// added (existing links are ignored).
+func (s *Store) AddTagToBookmarks(ids []int64, tag string) (int, error) {
+	norm := NormalizeTag(tag)
+	if norm == "" {
+		return 0, fmt.Errorf("tag name is empty")
+	}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	var tagID int64
+	err = tx.QueryRow(`SELECT id FROM tags WHERE norm_name = ?`, norm).Scan(&tagID)
+	if err == sql.ErrNoRows {
+		res, e := tx.Exec(`INSERT INTO tags (name, norm_name) VALUES (?, ?)`, strings.TrimSpace(tag), norm)
+		if e != nil {
+			return 0, e
+		}
+		tagID, _ = res.LastInsertId()
+	} else if err != nil {
+		return 0, err
+	}
+
+	affected := 0
+	for _, id := range ids {
+		res, e := tx.Exec(`INSERT OR IGNORE INTO bookmark_tags (bookmark_id, tag_id) VALUES (?, ?)`, id, tagID)
+		if e != nil {
+			return 0, e
+		}
+		if n, _ := res.RowsAffected(); n > 0 {
+			affected++
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return affected, nil
+}
+
+// RemoveTagFromBookmarks detaches tag from each bookmark, prunes the tag if it
+// becomes orphaned, and returns how many links were removed.
+func (s *Store) RemoveTagFromBookmarks(ids []int64, tag string) (int, error) {
+	norm := NormalizeTag(tag)
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	var tagID int64
+	err = tx.QueryRow(`SELECT id FROM tags WHERE norm_name = ?`, norm).Scan(&tagID)
+	if err == sql.ErrNoRows {
+		return 0, nil
+	} else if err != nil {
+		return 0, err
+	}
+
+	affected := 0
+	for _, id := range ids {
+		res, e := tx.Exec(`DELETE FROM bookmark_tags WHERE bookmark_id = ? AND tag_id = ?`, id, tagID)
+		if e != nil {
+			return 0, e
+		}
+		if n, _ := res.RowsAffected(); n > 0 {
+			affected++
+		}
+	}
+	if err := pruneOrphanTags(tx); err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return affected, nil
+}

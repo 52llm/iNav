@@ -74,3 +74,34 @@ func TestMergeTags(t *testing.T) {
 		t.Errorf("A tags = %v", a.Tags)
 	}
 }
+
+func TestAddAndRemoveTag(t *testing.T) {
+	s := newTestStore(t)
+	id, _ := s.UpsertBookmark(NewBookmark{URL: "https://a.com"})
+	_ = s.SetBookmarkTags(id, []string{"Go"}, "")
+
+	n, err := s.AddTagToBookmarks([]int64{id}, "web")
+	if err != nil || n != 1 {
+		t.Fatalf("add: n=%d err=%v", n, err)
+	}
+	b, _ := s.GetBookmark(id)
+	if len(b.Tags) != 2 {
+		t.Fatalf("tags = %v, want 2", b.Tags)
+	}
+
+	n, err = s.RemoveTagFromBookmarks([]int64{id}, "web")
+	if err != nil || n != 1 {
+		t.Fatalf("remove: n=%d err=%v", n, err)
+	}
+	b, _ = s.GetBookmark(id)
+	if len(b.Tags) != 1 || b.Tags[0] != "Go" {
+		t.Errorf("tags = %v, want [Go]", b.Tags)
+	}
+	// "web" had no other bookmarks → pruned.
+	tags, _ := s.ListTags()
+	for _, tg := range tags {
+		if tg.Name == "web" {
+			t.Error("orphan tag 'web' was not pruned")
+		}
+	}
+}
