@@ -156,6 +156,39 @@ func TestRetagAll(t *testing.T) {
 	}
 }
 
+func TestClearTagging(t *testing.T) {
+	s := newTestStore(t)
+	a, _ := s.UpsertBookmark(NewBookmark{URL: "https://a.com", Content: "keep me"})
+	b, _ := s.UpsertBookmark(NewBookmark{URL: "https://b.com"})
+	_ = s.SetBookmarkTags(a, []string{"x", "y"}, "summary a")
+	_ = s.SetBookmarkTags(b, []string{"z"}, "summary b")
+
+	n, err := s.ClearTagging()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 2 {
+		t.Fatalf("cleared = %d, want 2", n)
+	}
+
+	// All tags gone.
+	tags, _ := s.ListTags()
+	if len(tags) != 0 {
+		t.Errorf("tags = %+v, want none", tags)
+	}
+	// Bookmarks kept, but tags/summary cleared and status pending.
+	bm, err := s.GetBookmark(a)
+	if err != nil {
+		t.Fatalf("bookmark must be kept: %v", err)
+	}
+	if bm.URL != "https://a.com" || bm.Content != "keep me" {
+		t.Errorf("url/content not preserved: %+v", bm)
+	}
+	if len(bm.Tags) != 0 || bm.Summary != "" || bm.Status != StatusPending {
+		t.Errorf("not reset: tags=%v summary=%q status=%q", bm.Tags, bm.Summary, bm.Status)
+	}
+}
+
 func TestDeleteBookmarkPrunesOrphanTags(t *testing.T) {
 	s := newTestStore(t)
 	id, _ := s.UpsertBookmark(NewBookmark{URL: "https://a.com"})

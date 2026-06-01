@@ -15,6 +15,7 @@ func NewRouter(srv *Server, token string, publicRead bool, staticFS fs.FS) http.
 	api.HandleFunc("POST /api/tags/rename", srv.RenameTag)
 	api.HandleFunc("POST /api/tags/merge", srv.MergeTags)
 	api.HandleFunc("PATCH /api/bookmarks/{id}/tags", srv.PatchBookmarkTags)
+	api.HandleFunc("POST /api/tags/clear", srv.ClearTagging)
 	api.HandleFunc("POST /api/bookmarks/retag-all", srv.RetagAll)
 	api.HandleFunc("POST /api/bookmarks/{id}/retag", srv.RetagBookmark)
 	api.HandleFunc("DELETE /api/bookmarks/{id}", srv.DeleteBookmark)

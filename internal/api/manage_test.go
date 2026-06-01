@@ -52,6 +52,27 @@ func TestDeleteBookmarkEndpoint(t *testing.T) {
 	}
 }
 
+func TestClearTaggingEndpoint(t *testing.T) {
+	srv, s := newAPI(t)
+	a, _ := s.UpsertBookmark(store.NewBookmark{URL: "https://a.com"})
+	_ = s.SetBookmarkTags(a, []string{"x"}, "s")
+
+	r := NewRouter(srv, "secret", false, emptyFS())
+	req := httptest.NewRequest(http.MethodPost, "/api/tags/clear", nil)
+	req.Header.Set("Authorization", "Bearer secret")
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("code = %d body=%s", rr.Code, rr.Body)
+	}
+	if tags, _ := s.ListTags(); len(tags) != 0 {
+		t.Errorf("tags = %+v, want none", tags)
+	}
+	if _, err := s.GetBookmark(a); err != nil {
+		t.Errorf("bookmark should be kept: %v", err)
+	}
+}
+
 func TestRetagAllEndpoint(t *testing.T) {
 	srv, s := newAPI(t)
 	a, _ := s.UpsertBookmark(store.NewBookmark{URL: "https://a.com"})
