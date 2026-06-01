@@ -60,15 +60,19 @@ BROAD and REUSABLE across many pages; avoid narrow, page-specific ones.
 Output ONLY a JSON object: {"tags": ["..."], "summary": "one concise sentence"}.
 
 Tag rules:
+- Each tag MUST be a NOUN naming a subject, domain, technology, tool, or field
+  — what the page is ABOUT. NEVER use adjectives or attributes that merely
+  describe the page.
+  Good (noun topics): "python", "go", "databases", "web", "ai", "security", "networking", "kubernetes".
+  Bad (adjectives/attributes — never use): "open-source", "self-hosted", "lightweight", "free", "fast", "modern", "cross-platform".
 - Reuse an EXISTING tag whenever the page reasonably fits it. Strongly prefer
   reusing over inventing a new tag.
 - Invent a new tag only if no existing tag fits, and make it broad enough to
   recur on future pages.
-- Tags are lowercase ENGLISH, naming a general topic or domain.
-  Good (broad, reusable): "python", "go", "ai", "databases", "web", "devops", "security", "cli".
-  Bad (too narrow / one-off): "http-router", "api-wrapper", "orm", "ai-coding-agents".
+- Prefer broad topics over narrow ones; avoid one-off specifics like
+  "http-router", "api-wrapper", "orm".
 - When unsure between a general and a specific tag, choose the general one.
-- Use 1-3 tags. You may include AT MOST ONE more specific tag if it clearly adds value.
+- Tags are lowercase ENGLISH. Use 1-3 tags.
 - summary: one neutral sentence describing what the page is.
 
 EXISTING TAGS (reuse these first): %s
