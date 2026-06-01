@@ -52,6 +52,28 @@ func TestDeleteBookmarkEndpoint(t *testing.T) {
 	}
 }
 
+func TestRetagAllEndpoint(t *testing.T) {
+	srv, s := newAPI(t)
+	a, _ := s.UpsertBookmark(store.NewBookmark{URL: "https://a.com"})
+	_ = s.SetBookmarkTags(a, []string{"x"}, "s")
+
+	r := NewRouter(srv, "secret", false, emptyFS())
+	req := httptest.NewRequest(http.MethodPost, "/api/bookmarks/retag-all", nil)
+	req.Header.Set("Authorization", "Bearer secret")
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("code = %d body=%s", rr.Code, rr.Body)
+	}
+	b, _ := s.GetBookmark(a)
+	if b.Status != store.StatusPending {
+		t.Errorf("status = %q, want pending after retag-all", b.Status)
+	}
+	if _, ok, _ := s.ClaimNextJob(); !ok {
+		t.Error("expected a queued job after retag-all")
+	}
+}
+
 func TestPatchTagsEndpoint(t *testing.T) {
 	srv, s := newAPI(t)
 	id, _ := s.UpsertBookmark(store.NewBookmark{URL: "https://a.com"})

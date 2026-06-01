@@ -96,6 +96,16 @@ func (srv *Server) RetagBookmark(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"id": id, "status": store.StatusPending})
 }
 
+// RetagAll re-enqueues every bookmark for tagging (e.g. after a prompt change).
+func (srv *Server) RetagAll(w http.ResponseWriter, r *http.Request) {
+	n, err := srv.store.RetagAll()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"queued": n})
+}
+
 // DeleteBookmark removes a bookmark.
 func (srv *Server) DeleteBookmark(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)

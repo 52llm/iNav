@@ -123,6 +123,39 @@ func TestRetagBookmark(t *testing.T) {
 	}
 }
 
+func TestRetagAll(t *testing.T) {
+	s := newTestStore(t)
+	a, _ := s.UpsertBookmark(NewBookmark{URL: "https://a.com"})
+	b, _ := s.UpsertBookmark(NewBookmark{URL: "https://b.com"})
+	_ = s.SetBookmarkTags(a, []string{"x"}, "s") // both become tagged
+	_ = s.SetBookmarkTags(b, []string{"y"}, "s")
+
+	n, err := s.RetagAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 2 {
+		t.Fatalf("queued = %d, want 2", n)
+	}
+	for _, id := range []int64{a, b} {
+		bm, _ := s.GetBookmark(id)
+		if bm.Status != StatusPending {
+			t.Errorf("bookmark %d status = %q, want pending", id, bm.Status)
+		}
+	}
+	claimed := 0
+	for {
+		_, ok, _ := s.ClaimNextJob()
+		if !ok {
+			break
+		}
+		claimed++
+	}
+	if claimed != 2 {
+		t.Errorf("claimable jobs = %d, want 2", claimed)
+	}
+}
+
 func TestDeleteBookmarkPrunesOrphanTags(t *testing.T) {
 	s := newTestStore(t)
 	id, _ := s.UpsertBookmark(NewBookmark{URL: "https://a.com"})
