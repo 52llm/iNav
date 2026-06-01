@@ -31,9 +31,15 @@ export default function TagManager({
     onChanged();
   }
   async function retagAll() {
-    if (!confirm("重新给所有收藏生成标签？将清空现有标签并按最新提示词重打，可能消耗较多 LLM 调用。")) return;
+    if (!confirm("重新给所有收藏生成标签？按最新提示词重打，可能消耗较多 LLM 调用。")) return;
     const { queued } = await api.retagAll();
     setMsg(`已重新入队 ${queued} 条，标签将陆续刷新`);
+    onChanged();
+  }
+  async function clearTags() {
+    if (!confirm("清空所有标签和摘要？收藏的网址会保留，标签词表归零（之后可用「全部重打标」重新生成）。")) return;
+    const { cleared } = await api.clearTags();
+    setMsg(`已清空 ${cleared} 条的标签与摘要，可点「全部重打标」从干净词表重新生成`);
     onChanged();
   }
 
@@ -82,11 +88,18 @@ export default function TagManager({
         </div>
       </div>
       <div className="border-t pt-3">
-        <h3 className="font-medium mb-2">重刷全部标签</h3>
-        <p className="text-xs text-gray-500 mb-2">改了打标提示词后，用它把所有收藏重新打一遍标签。</p>
-        <button onClick={retagAll} className="bg-amber-600 text-white rounded px-3 py-1">
-          全部重打标
-        </button>
+        <h3 className="font-medium mb-2">批量维护</h3>
+        <p className="text-xs text-gray-500 mb-2">
+          改了打标提示词后：先「清空所有标签」让词表归零，再「全部重打标」从干净状态重新生成（收藏网址始终保留）。
+        </p>
+        <div className="flex gap-2">
+          <button onClick={clearTags} className="bg-red-600 text-white rounded px-3 py-1">
+            清空所有标签
+          </button>
+          <button onClick={retagAll} className="bg-amber-600 text-white rounded px-3 py-1">
+            全部重打标
+          </button>
+        </div>
       </div>
       <datalist id="taglist">
         {tags.map((t) => (

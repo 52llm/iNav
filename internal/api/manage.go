@@ -96,6 +96,17 @@ func (srv *Server) RetagBookmark(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"id": id, "status": store.StatusPending})
 }
 
+// ClearTagging wipes all tags/summaries and resets bookmarks to pending,
+// keeping the bookmarks themselves. Follow with retag-all to regenerate.
+func (srv *Server) ClearTagging(w http.ResponseWriter, r *http.Request) {
+	n, err := srv.store.ClearTagging()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"cleared": n})
+}
+
 // RetagAll re-enqueues every bookmark for tagging (e.g. after a prompt change).
 func (srv *Server) RetagAll(w http.ResponseWriter, r *http.Request) {
 	n, err := srv.store.RetagAll()

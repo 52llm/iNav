@@ -215,6 +215,33 @@ func (s *Store) RetagBookmark(id int64) error {
 	return s.EnqueueTagJob(id)
 }
 
+// ClearTagging removes all tags and tag links and clears every bookmark's
+// summary, resetting bookmarks to pending. Bookmarks themselves (url, title,
+// content) are kept. Use to start tagging from a clean slate, then RetagAll.
+// Returns the number of bookmarks affected.
+func (s *Store) ClearTagging() (int, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`DELETE FROM bookmark_tags`); err != nil {
+		return 0, err
+	}
+	if _, err := tx.Exec(`DELETE FROM tags`); err != nil {
+		return 0, err
+	}
+	res, err := tx.Exec(`UPDATE bookmarks SET summary = '', status = ?, tagged_at = NULL`, StatusPending)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return int(n), nil
+}
+
 // RetagAll resets every bookmark to pending and enqueues a fresh tagging job
 // for each. Returns the number of bookmarks queued.
 func (s *Store) RetagAll() (int, error) {
